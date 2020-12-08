@@ -41,5 +41,4 @@ public class GameElement {
     public void playSound() {
         view.playSound(soundId);
     }
-
 }

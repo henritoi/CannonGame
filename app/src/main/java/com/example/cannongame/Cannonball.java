@@ -2,8 +2,12 @@ package com.example.cannongame;
 
 import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.util.Log;
+
+import java.util.ArrayList;
 
 public class Cannonball extends GameElement {
+    private static final String TAG = "Cannonball";
     private float velocityX;
     private boolean onScreen;
 
@@ -20,6 +24,10 @@ public class Cannonball extends GameElement {
 
     public boolean collidesWith(GameElement element) {
         return (Rect.intersects(shape, element.shape) && this.velocityX > 0);
+    }
+
+    public boolean collidesWith(Brick brick) {
+        return (Rect.intersects(shape, brick.shape) && this.velocityX > 0);
     }
 
     public boolean isOnScreen() {

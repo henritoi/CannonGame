@@ -29,7 +29,9 @@ public class CannonView extends SurfaceView implements SurfaceHolder.Callback {
     private static final String TAG = "CannonView";
 
     // pelin vakiot
-    public static final int MISS_PENALTY = 2;
+    public static final int GAME_TIME = 30;
+    //public static final int MISS_PENALTY = 0;
+    public static final int BRICK_DESTRUCTION_REWARD = 3;
     public static final int HIT_REWARD = 3;
 
     // Kanuunan vakioita
@@ -51,10 +53,20 @@ public class CannonView extends SurfaceView implements SurfaceHolder.Callback {
     public static final double TARGET_MAX_SPEED_PERCENT = 6.0 / 4;
 
     // Vakioita Blocker:lle
-    public static final double BLOCKER_WIDTH_PERCENT = 1.0 / 40;
-    public static final double BLOCKER_LENGTH_PERCENT = 1.0 / 4;
-    public static final double BLOCKER_X_PERCENT = 1.0 / 2;
-    public static final double BLOCKER_SPEED_PERCENT = 1.0;
+    //public static final double BLOCKER_WIDTH_PERCENT = 1.0 / 40;
+    //public static final double BLOCKER_LENGTH_PERCENT = 1.0 / 4;
+    //public static final double BLOCKER_X_PERCENT = 1.0 / 2;
+    //public static final double BLOCKER_SPEED_PERCENT = 1.0;
+
+    // Tiiliseinä
+    public static final int BRICKWALL_LAYER_COUNT = 2;
+    public static final int BRICKS_PER_COLUMN = 10;
+    public static final int BRICK_SPACER = 5;
+    public static final int BRICK_COLUMN_SPACER = 5;
+    public static final int BRICK_WIDTH = 30;
+    public static final int BRICK_MIN_HITS = 3;
+    public static final int BRICK_MAX_HITS = 6;
+    public static final double BRICKWALL_X_PERCENT = 1.0 / 2;
 
     // tekstin koko 1/18 ruudun leveydestä
     public static final double TEXT_SIZE_PERCENT = 1.0 / 18;
@@ -67,6 +79,7 @@ public class CannonView extends SurfaceView implements SurfaceHolder.Callback {
     private Cannon cannon;
     private Blocker blocker;
     private ArrayList<Target> targets;
+    private ArrayList<Brick> bricks;
 
     // mittasuhteet
     private int screenWidth;
@@ -185,7 +198,6 @@ public class CannonView extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     public void newGame() {
-// luodaan uusi Cannon
         cannon = new Cannon(this,
                 (int) (CANNON_BASE_RADIUS_PERCENT * screenHeight),
                 (int) (CANNON_BARREL_LENGTH_PERCENT * screenWidth),
@@ -193,6 +205,7 @@ public class CannonView extends SurfaceView implements SurfaceHolder.Callback {
 
         Random random = new Random();
         targets = new ArrayList<>();
+        bricks = new ArrayList<>();
 
         int targetX = (int) (TARGET_FIRST_X_PERCENT * screenWidth);
 
@@ -221,14 +234,40 @@ public class CannonView extends SurfaceView implements SurfaceHolder.Callback {
             targetX += (TARGET_WIDTH_PERCENT + TARGET_SPACING_PERCENT) * screenWidth;
         }
 
-        blocker = new Blocker(this, Color.BLACK, MISS_PENALTY,
-                (int) (BLOCKER_X_PERCENT * screenWidth),
-                (int) ((0.5 - BLOCKER_LENGTH_PERCENT / 2) * screenHeight),
-                (int) (BLOCKER_WIDTH_PERCENT * screenWidth),
-                (int) (BLOCKER_LENGTH_PERCENT * screenHeight),
-                (float) (BLOCKER_SPEED_PERCENT * screenHeight));
+        int startX = (int) ((BRICKWALL_X_PERCENT * screenWidth) - (BRICKWALL_LAYER_COUNT * BRICK_WIDTH + (BRICKWALL_LAYER_COUNT - 1 * BRICK_SPACER)) / 2);
+        int brickHeight = (int) ((screenHeight - ((BRICKS_PER_COLUMN - 1) * BRICK_SPACER)) / BRICKS_PER_COLUMN);
+        for (int i = 0; i < BRICKWALL_LAYER_COUNT; i++) {
+            if (i % 2 == 1) {
+                for(int j = 0; j < BRICKS_PER_COLUMN; j++) {
+                    bricks.add(new Brick(
+                            this,
+                            (int) (startX + (i * (BRICK_WIDTH + BRICK_COLUMN_SPACER))),
+                            (int) (j * brickHeight + (j * BRICK_SPACER)),
+                            (int) (startX + (i * (BRICK_WIDTH + BRICK_COLUMN_SPACER)) + BRICK_WIDTH),
+                            (int) (j * brickHeight + (j * BRICK_SPACER) + brickHeight),
+                            BRICK_MIN_HITS,
+                            BRICK_MAX_HITS,
+                            BRICK_DESTRUCTION_REWARD
+                    ));
+                }
+            }else {
+                for(int j = 0; j < BRICKS_PER_COLUMN + 2; j++) {
+                    bricks.add(new Brick(
+                            this,
+                            (int) (startX + (i * (BRICK_WIDTH + BRICK_COLUMN_SPACER))),
+                            (int) (j * brickHeight + (j * BRICK_SPACER)  - (brickHeight / 2)),
+                            (int) (startX + (i * (BRICK_WIDTH + BRICK_COLUMN_SPACER)) + BRICK_WIDTH),
+                            (int) (j * brickHeight + (j * BRICK_SPACER) + brickHeight - (brickHeight / 2)),
+                            BRICK_MIN_HITS,
+                            BRICK_MAX_HITS,
+                            BRICK_DESTRUCTION_REWARD
+                    ));
+                }
+            }
 
-        timeLeft = 10;
+        }
+
+        timeLeft = GAME_TIME;
 
         shotsFired = 0;
         totalElapsettime = 0.0;
@@ -248,12 +287,12 @@ public class CannonView extends SurfaceView implements SurfaceHolder.Callback {
         if (cannon.getCannonball() != null)
             cannon.getCannonball().update(interval);
 
-        blocker.update(interval);
+        //blocker.update(interval);
 
         for (GameElement target : targets)
             target.update(interval);
 
-        timeLeft -= interval;
+        //timeLeft -= interval;
 
         if (timeLeft <= 0) {
             timeLeft = 0.0;
@@ -298,10 +337,12 @@ public class CannonView extends SurfaceView implements SurfaceHolder.Callback {
                 cannon.getCannonball().isOnScreen())
             cannon.getCannonball().draw(canvas);
 
-        blocker.draw(canvas);
-
         for (GameElement target : targets)
             target.draw(canvas);
+
+        for (Brick brick : bricks) {
+            brick.draw(canvas);
+        }
     }
 
     private void showGameOverDialog(final int messageId) {
@@ -369,13 +410,19 @@ public class CannonView extends SurfaceView implements SurfaceHolder.Callback {
             cannon.removeCannonball();
         }
 
-        if (cannon.getCannonball() != null &&
-                cannon.getCannonball().collidesWith(blocker)) {
-            blocker.playSound();
-
-            cannon.getCannonball().reverseVelocityX();
-
-            timeLeft -= blocker.getMissPenalty();
+        if (cannon.getCannonball() != null && cannon.getCannonball().isOnScreen()) {
+            for(int i = 0; i < bricks.size(); i++) {
+                if(cannon.getCannonball().collidesWith(bricks.get(i))) {
+                    // TODO: brick.playSound();
+                    cannon.removeCannonball();
+                    if (bricks.get(i).hit()) {
+                        timeLeft += bricks.get(i).getDestructionReward();
+                        bricks.remove(i);
+                        i--;
+                    }
+                    break;
+                }
+            }
         }
     }
 
